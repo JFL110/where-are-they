@@ -2,20 +2,21 @@ import React from 'react'
 import { Component } from 'react';
 import { connect } from 'react-redux'
 import timeSinceString from './timeSinceString'
-import { mapActions , sliceName as mapSliceName, mostRecentPoint } from './map'
+import { mapActions , sliceName as mapSliceName } from './map-leaflet'
 
 class TopBarComponent extends Component {
   render() {
       let pointsLoaded = this.props.mainLocationsFetched;
       let fetchError = this.props.fetchError || (this.props.mainLocationsFetched &&  this.props.points.length == 0);
-      let _mostRecentPoint = mostRecentPoint(this.props.points);
+      const _mostRecentPoint = this.props.points.find(p => p.isMostRecent);
+      console.log(_mostRecentPoint);
 
       let centreMap = (() => {
         this.props.setNewCentre({ lat: _mostRecentPoint.lat , lng:  _mostRecentPoint.long, default : false});
       }).bind(this);
 
       let summary = (() => {
-        return  <div onClick={centreMap}  className="clickToCentreButton"> <h2 className="appText">{"Updated " + timeSinceString(new Date(_mostRecentPoint.date)) + " ago"}</h2></div>;
+        return  <div onClick={centreMap}  className="clickToCentreButton"> <h2 className="appText">{"Updated " + timeSinceString(new Date(_mostRecentPoint.time)) + " ago"}</h2></div>;
       }).bind(this);
 
       return <div className="topBar">

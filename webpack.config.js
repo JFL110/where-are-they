@@ -3,8 +3,19 @@ module.exports = {
   output: {
     filename: "./bundle.js"
   },
-  watch : true,
-  mode : "production",
+  devServer: {
+    writeToDisk: true,
+    historyApiFallback: {
+      index: './index.html'
+    }
+  },
+  optimization: {
+     splitChunks: {
+       chunks: 'async',
+     },
+   },
+
+  mode : "development",
   module: {
     rules: [
       {
@@ -17,10 +28,22 @@ module.exports = {
             plugins: ["@babel/plugin-proposal-class-properties"]
           }
         }
+      },
+      {
+        test: /\.(png|jpg|gif)$/i,
+        use: [
+          {
+            loader: 'url-loader',
+            options: {
+              limit: 8192
+            }
+          }
+        ]
       }
-    ]
+    ],
+
   },
   resolve: {
     extensions: ['.js', '.es6']
-  }
+  },
 }
