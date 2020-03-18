@@ -9,7 +9,6 @@ class TopBarComponent extends Component {
       let pointsLoaded = this.props.mainLocationsFetched;
       let fetchError = this.props.fetchError || (this.props.mainLocationsFetched &&  this.props.points.length == 0);
       const _mostRecentPoint = this.props.points.find(p => p.isMostRecent);
-      console.log(_mostRecentPoint);
 
       let centreMap = (() => {
         this.props.setNewCentre({ lat: _mostRecentPoint.lat , lng:  _mostRecentPoint.long, default : false});

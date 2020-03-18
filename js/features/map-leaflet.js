@@ -21,8 +21,6 @@ const SimpleMap = ({centre, points, viewportObject}) => {
     // const singleManualPointMarkerIcon = this._circleMarker("red");
     const redDotIcon = L.divIcon({className: 'red-dot-marker'});
     const blueDotIcon = L.divIcon({className: 'blue-dot-marker'});
-
-    console.log("Rendering [" + points.length + "] points");
     return (
     <LeafletMap
       center={[ centre.lat, centre.lng]}
