@@ -9,7 +9,7 @@ import Carousel, { Modal, ModalGateway } from 'react-images';
 import Control from 'react-leaflet-control';
 
 const initialViewportObject = {};
-const jsonFileAddr = "http://jfl110-my-location.s3.eu-west-2.amazonaws.com/my-location-points.json";
+const jsonFileAddr = "https://jfl110-my-location.s3.eu-west-2.amazonaws.com/my-location-points.json";
 // const jsonFileAddr = "./dist/testing-points.json";
 
 const mostRecentPointMarkerIcon = "./map-icons/icon_red.png";
