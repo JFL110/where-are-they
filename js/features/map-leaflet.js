@@ -6,9 +6,11 @@ import { Map as LeafletMap, TileLayer, Marker, Popup } from 'react-leaflet';
 import mergeByKey from "array-merge-by-key";
 import timeSinceString from './timeSinceString'
 import Carousel, { Modal, ModalGateway } from 'react-images';
+import Control from 'react-leaflet-control';
 
 const initialViewportObject = {};
-const jsonFileAddr = "https://jfl110-my-location.s3.eu-west-2.amazonaws.com/my-location-points.json";
+const jsonFileAddr = "http://jfl110-my-location.s3.eu-west-2.amazonaws.com/my-location-points.json";
+// const jsonFileAddr = "./dist/testing-points.json";
 
 const mostRecentPointMarkerIcon = "./map-icons/icon_red.png";
 const mapCss = {
@@ -16,7 +18,11 @@ const mapCss = {
   height: '100%',
 };
 
-const SimpleMap = ({centre, points, viewportObject, currentLightBoxImageIndex, setCurrentLightBoxImageIndex}) => {
+function pointToCentre(point){
+  return { lat: point.lat, lng: point.long, default:false};
+}
+
+const SimpleMap = ({centre, points, viewportObject, currentLightBoxImageIndex, setCurrentLightBoxImageIndex, setNewCentre, lastNonNullLightBoxImageIndex}) => {
     // Markers
     // const singleAutoPointMarkerIcon  = this._circleMarker("blue");
     // const singleManualPointMarkerIcon = this._circleMarker("red");
@@ -28,24 +34,68 @@ const SimpleMap = ({centre, points, viewportObject, currentLightBoxImageIndex, s
      iconAnchor:   [20, 20],
     });
 
-    const onClickPhotoMarker = (point) => {
-      setCurrentLightBoxImageIndex(point.photoPointId);
-    }
+    const onCentreToMostRecentLocation = () => {
+      let _mostRecentPoint = points.find(p => p.isMostRecent);
+      if(_mostRecentPoint != null){
+        setNewCentre(pointToCentre(_mostRecentPoint));
+      }
+    };
 
     const photoUrls = points.filter(p => p.isPhoto).map(p => ({src :p.url}));
     const onModalClose = () => {setCurrentLightBoxImageIndex(null);};
 
+    const setCentreToPhotoId = i => {
+      setCurrentLightBoxImageIndex(i);
+      let _imagePoint =  points.find(p => p.isPhoto && p.photoPointId == i);
+      if(_imagePoint != null){
+        setNewCentre(pointToCentre(_imagePoint));
+      }
+    };
+
+    const onClickPhotoMarker = (point) => {
+      setCurrentLightBoxImageIndex(point.photoPointId);
+      setNewCentre(pointToCentre(point));
+    }
+
+    const onClickOpenPhotosControl = () => {
+      if(lastNonNullLightBoxImageIndex == null){
+        // Goto most recent
+        let sortedPhotos = points.filter(p => p.isPhoto && p.time != null).sort((a, b) => b.time - a.time);
+        if(sortedPhotos.length > 0){
+          setCurrentLightBoxImageIndex(sortedPhotos[0].photoPointId);
+          setNewCentre(pointToCentre(sortedPhotos[0]));
+        }
+      } else {
+        setCentreToPhotoId(lastNonNullLightBoxImageIndex);
+      }
+    };
+
     return (
       <React.Fragment>
         {photoUrls.length > 0 && currentLightBoxImageIndex != null ? <ModalGateway>
-          <Modal onClose={onModalClose}>
-            <Carousel views={photoUrls} currentIndex={currentLightBoxImageIndex}/>
+          <Modal
+          onClose={onModalClose}
+          styles={{
+               blanket: base => ({
+                 ...base,
+                 backgroundColor: 'rgba(0,0,0,0.4)',
+               }),
+             }}>
+            <Carousel
+            views={photoUrls}
+            currentIndex={currentLightBoxImageIndex}
+            trackProps={{
+              onViewChange : setCentreToPhotoId
+            }}
+            />
           </Modal>
         </ModalGateway> : null}
+
+
         <LeafletMap
         center={[ centre.lat, centre.lng]}
         {...(initialViewportObject == viewportObject ? {zoom:10} : {})}
-        minZoom={3}
+        minZoom={2}
         maxZoom={14}
         attributionControl={true}
         zoomControl={true}
@@ -56,7 +106,15 @@ const SimpleMap = ({centre, points, viewportObject, currentLightBoxImageIndex, s
         easeLinearity={0.35}
         viewport={viewportObject}
        >
-        <TileLayer
+
+       <Control position="topleft" className="leaflet-control-zoom leaflet-bar" >
+        <a className="leaflet-control-zoom-in zoom-circle" href="#" onClick={onCentreToMostRecentLocation} title="Centre to most recent location"></a>
+       </Control>
+       <Control position="topleft" className="leaflet-control-zoom leaflet-bar" >
+        <a className="leaflet-control-zoom-in" href="#" onClick={onClickOpenPhotosControl} title="Open photos">
+          <img src="camera-icon.png" style={{width:"100%"}}/></a>
+       </Control>
+       <TileLayer
           url='http://{s}.tile.osm.org/{z}/{x}/{y}.png'
         />
         {
@@ -80,9 +138,10 @@ const mapSlice = createSlice({
                  mainLocationsFetched : false,
                  centre : { lat: 47.444, lng: -1.5, default : true},
                  viewportObject : initialViewportObject,
-                 currentLightBoxImageIndex : null},
+                 currentLightBoxImageIndex : null,
+                 lastNonNullLightBoxImageIndex : null},
   reducers: {
-    setCurrentLightBoxImageIndex : (state, action) => {state.currentLightBoxImageIndex = action.payload;},
+    setCurrentLightBoxImageIndex : (state, action) => {state.currentLightBoxImageIndex = action.payload; if(action.payload != null){state.lastNonNullLightBoxImageIndex = action.payload;}},
     setMainLocationsFetched : (state, action) => {state.mainLocationsFetched = action.payload;},
     setFetchError : (state, action) => {state.fetchError = action.payload;},
     setNewCentre : (state, action) => {state.centre = action.payload; state.viewportObject = {};},
@@ -98,7 +157,7 @@ const mapSlice = createSlice({
 
       // Set map centre
       if(state.centre.default){
-        state.centre = { lat: _mostRecentPoint.lat, lng: _mostRecentPoint.long, default:false};
+        state.centre = pointToCentre(_mostRecentPoint);
         state.viewportObject = initialViewportObject;
       }
     }
@@ -106,10 +165,11 @@ const mapSlice = createSlice({
 });
 
 export const LocationMap = connect(// State -> Props (it gets all the slice state)
-                                state => {return { points : state[mapSlice.name].points,
+                                state => ({ points : state[mapSlice.name].points,
                                                    centre :  state[mapSlice.name].centre,
                                                    viewportObject : state[mapSlice.name].viewportObject,
-                                                   currentLightBoxImageIndex :  state[mapSlice.name].currentLightBoxImageIndex}},
+                                                   currentLightBoxImageIndex :  state[mapSlice.name].currentLightBoxImageIndex,
+                                                   lastNonNullLightBoxImageIndex : state[mapSlice.name].lastNonNullLightBoxImageIndex}),
                                    // Dispatch -> Props
                                  {setNewCentre : mapSlice.actions.setNewCentre,
                                   setCurrentLightBoxImageIndex : mapSlice.actions.setCurrentLightBoxImageIndex})(SimpleMap)
@@ -137,7 +197,7 @@ export const onStoreCreated = store => {
                   lat : response.mostRecentPoint.l,
                   long :response.mostRecentPoint.g,
                   isPhoto : false,
-                  time : new Date(response.mostRecentPointTime).toString(),
+                  time : response.mostRecentPointTime,
                   isMostRecent : true});
   }
 
@@ -146,7 +206,7 @@ export const onStoreCreated = store => {
      points.push(...(response.photos.map(i => ({id : i.url,
                                             lat : i.point.l,
                                             long : i.point.g,
-                                            time : new Date(i.time).toString(),
+                                            time : i.time,
                                             url : i.url,
                                             isPhoto : true,
                                             photoPointId: photoPointId++,
