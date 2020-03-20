@@ -12,6 +12,16 @@ const initialViewportObject = {};
 const jsonFileAddr = "https://jfl110-my-location.s3.eu-west-2.amazonaws.com/my-location-points.json";
 // const jsonFileAddr = "./dist/testing-points.json";
 
+// Copied from https://dev.to/ycmjason/javascript-fetch-retry-upon-failure-3p6g
+const fetch_retry = async (url, options, n) => {
+    try {
+        return await fetch(url, options)
+    } catch(err) {
+        if (n === 1) throw err;
+        return await fetch_retry(url, options, n - 1);
+    }
+};
+
 const mostRecentPointMarkerIcon = "./map-icons/icon_red.png";
 const mapCss = {
   width: '100%',
@@ -180,7 +190,7 @@ export const sliceName = mapSlice.name;
 
 export const onStoreCreated = store => {
   // Initial point load
-  fetch(jsonFileAddr, {	method : 'GET' /*, mode: 'no-cors' */})
+  fetch_retry(jsonFileAddr, {	method : 'GET' /*, mode: 'no-cors' */}, 4)
   .then(response => response.json())
   .then(response => {
     if(response == null || response.points == null || !Array.isArray(response.points)){
