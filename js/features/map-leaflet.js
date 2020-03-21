@@ -213,14 +213,17 @@ export const onStoreCreated = store => {
 
    if(response.photos != null && Array.isArray(response.photos)){
      var photoPointId = 0;
-     points.push(...(response.photos.map(i => ({id : i.url,
-                                            lat : i.point.l,
-                                            long : i.point.g,
-                                            time : i.time,
-                                            url : i.url,
-                                            isPhoto : true,
-                                            photoPointId: photoPointId++,
-                                            isMostRecent : false}))));
+     let photoPoints = response.photos
+                        .sort((a, b) => b.time - a.time)
+                        .map(i => ({id : i.url,
+                            lat : i.point.l,
+                            long : i.point.g,
+                            time : i.time,
+                            url : i.url,
+                            isPhoto : true,
+                            photoPointId: photoPointId++,
+                            isMostRecent : false}));
+     points.push(...photoPoints);
    }
 
    store.dispatch(mapActions.mergePoints(points));
