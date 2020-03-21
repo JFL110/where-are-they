@@ -132,7 +132,7 @@ const SimpleMap = ({centre, points, viewportObject, currentLightBoxImageIndex, s
             key={p.id}
             position={[p.lat, p.long]}
             icon={p.isPhoto ? photoIcon : (p.isMostRecent ? redDotIcon : blueDotIcon)}
-            {...(p.isMostRecent ? {zIndexOffset : 1000} : {})}
+            {...(p.isMostRecent ? {zIndexOffset : 1000} : (p.isPhoto ? {zIndexOffset : 300 + p.photoPointId} : {}))}
             {...(p.isPhoto ? {onClick : () => onClickPhotoMarker(p)} : {})}
             />)
         }
